@@ -23,6 +23,9 @@ pub enum HandleMsg {
         quantity: Option<Vec<Coin>>,
     },
     Refund {},
+    Append {
+        text: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -1,9 +1,10 @@
 use cosmwasm_std::{
-    generic_err, log, unauthorized, Api, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Env,
+    generic_err, log, unauthorized, Api, BankMsg, MessageMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Env,
     Extern, HandleResponse, HandleResult, InitResponse, InitResult, Querier, StdResult, Storage,
 };
 
 use crate::msg::{HandleMsg, InitMsg, QueryMsg};
+// use crate::init_handle::{MessageMsg};
 use crate::state::{config, config_read, State};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -35,6 +36,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::Approve { quantity } => try_approve(deps, env, state, quantity),
         HandleMsg::Refund {} => try_refund(deps, env, state),
+        HandleMsg::Append {text} => try_append(deps, env, state, text),
     }
 }
 
@@ -93,6 +95,54 @@ fn try_refund<S: Storage, A: Api, Q: Querier>(
     }
 }
 
+
+fn try_append<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    state: State,
+    text: String,
+) -> HandleResult {
+    if env.message.sender != state.arbiter {
+        Err(unauthorized())
+    } else {
+
+    send_message(
+            &deps.api,
+            &state.arbiter,
+            &state.recipient,
+            text,
+            "append",
+        )
+    }
+}
+
+// this is a helper to move the tokens, so the business logic is easy to read
+fn send_message<A: Api>(
+    api: &A,
+    from_address: &CanonicalAddr,
+    to_address: &CanonicalAddr,
+    text: String,
+    action: &str,
+) -> HandleResult {
+    let from_human = api.human_address(from_address)?;
+    let to_human = api.human_address(to_address)?;
+    let log = vec![log("action", action), log("to", to_human.as_str())];
+
+    let borrowed_string: &str = "this is a msg via rust, and str and string are different here! ";
+    let new_string = format!("{}{}", borrowed_string, text);
+
+    let r = HandleResponse {
+        messages: vec![CosmosMsg::Message(MessageMsg::Send {
+            from_address: from_human,
+            to_address: to_human,
+            text: new_string,
+        })],
+        log,
+        data: None,
+    };
+    Ok(r)
+}
+
 // this is a helper to move the tokens, so the business logic is easy to read
 fn send_tokens<A: Api>(
     api: &A,
@@ -116,6 +166,8 @@ fn send_tokens<A: Api>(
     };
     Ok(r)
 }
+
+
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
