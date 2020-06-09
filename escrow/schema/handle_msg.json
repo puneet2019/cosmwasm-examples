@@ -27,6 +27,22 @@
     {
       "type": "object",
       "required": [
+        "append"
+      ],
+      "properties": {
+        "append": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
         "refund"
       ],
       "properties": {
